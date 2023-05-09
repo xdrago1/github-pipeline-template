@@ -23,11 +23,11 @@ services:
     restart: always
     environment:
       PORT: ${FRONTEND_PORT}
+    expose:
+      - ${FRONTEND_PORT}
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        PORT: ${FRONTEND_PORT}
     networks:
       - frontend_network
     depends_on:

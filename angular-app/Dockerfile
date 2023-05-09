@@ -18,7 +18,6 @@ RUN npm install
 # Get all the code needed to run the app
 COPY . /usr/src/app/
 
-EXPOSE ${PORT}
 
 # Build the app
 RUN npm run build:ssr
