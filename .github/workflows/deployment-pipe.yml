@@ -26,6 +26,7 @@ env:
   DB_USER: ${{ secrets.DEV_USER }}
   DB_PASS: ${{ secrets.DEV_PASS }}
 
+
 jobs:
   test:
     runs-on: ubuntu-latest
