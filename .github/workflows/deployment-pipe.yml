@@ -46,6 +46,7 @@ jobs:
         run: ng test
 
   build:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read
