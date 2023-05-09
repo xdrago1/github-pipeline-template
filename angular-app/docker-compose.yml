@@ -1,0 +1,107 @@
+version: '3.8'
+services:
+  #nest Backend
+  backend:
+    container_name: backend
+    restart: always
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      PORT: ${BACKEND_PORT}
+    depends_on:
+      - db
+    networks:
+      - backend_network
+  # Angular FrontEnd
+  frontend:
+    container_name: frontend
+    restart: always
+    environment:
+      PORT: ${FRONTEND_PORT}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PORT: ${FRONTEND_PORT}
+    networks:
+      - frontend_network
+    depends_on:
+      - backend
+  # MariaDB
+  db:
+    container_name: mariadb
+    image: mariadb:latest
+    restart: always
+    expose:
+      - 3306
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+    networks:
+      - backend_network
+  #db backup
+  mysqlbackup:
+    container_name: mysqlbackup
+    image: selim13/automysqlbackup:2.6-9
+    restart: always
+    environment:
+      USERNAME: kummerchat_docker
+      PASSWORD: jH(t783ghsduzg
+      DBHOST: db
+      DBEXCLUDE: "performance_schema information_schema"
+      CRON_SCHEDULE: "0 0,12 * * *"
+      LATEST: "yes"
+    depends_on:
+      - db
+    networks:
+      - backend_network
+  # PhpMyAdmin
+  phpmyadmin:
+    container_name: phpmyadmin
+    restart: always
+    depends_on:
+      - db
+    image: phpmyadmin/phpmyadmin
+    environment:
+      PMA_HOST: ${DB_HOST}
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      PMA_ABSOLUTE_URI: ${URL}/pma
+    networks:
+      - backend_network
+  # NGINX
+  nginx:
+    container_name: nginx
+    restart: always
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nginx.rule=Host(`example.com`) || Host(`www.example.com`)"
+      - "traefik.http.routers.nginx.entrypoints=websecure"
+      - "traefik.http.routers.nginx.tls.certresolver=myresolver"
+      - "traefik.http.middlewares.nginx_redirect.redirectregex.regex=^(https?://)www.(.*)$$"
+      - "traefik.http.middlewares.nginx_redirect.redirectregex.replacement=$${1}$${2}"
+      - "traefik.http.routers.nginx.middlewares=nginx_redirect"
+      - "traefik.docker.network=traefik_proxy"
+    networks:
+      - backend_network
+      - frontend_network
+      - traefik_proxy
+    depends_on:
+      - frontend
+      - phpmyadmin
+networks:
+  backend_network:
+  frontend_network:
+  traefik_proxy:
+    external: true
+
+

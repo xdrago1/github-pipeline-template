@@ -7,29 +7,27 @@ name: Development Deployment
 
 on:
   push:
-    branches: [ "development" ]
+    branches: [ "main" ]
     # Publish semver tags as releases.
     tags: [ 'v*.*.*' ]
-  pull_request:
-    branches: [ "development" ]
 
 env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: ghcr.io
-  # github.repository as <account>/<repo>
-  IMAGE_NAME: ${{ github.repository }}
-  DB_HOST: ${{ secrets.DEV_DB_HOST }}
-  DB_NAME: ${{ secrets.DEV_DB_NAME }}
-  DB_USER: ${{ secrets.DEV_DB_USER }}
-  DB_PASS: ${{ secrets.DEV_DB_PASS }}
-  SERVER_URL: ${{ vars.DEV_SERVER_URL }}
-  NODE_ENV: github
-  FRONTEND_DEVELOPMENT_PORT: ${{ vars.FRONTEND_DEVELOPMENT_PORT }}
-  BACKEND_DEVELOPMENT_PORT: ${{ vars.BACKEND_DEVELOPMENT_PORT }}
+  # you can set variables here or configure them in your repo secrets / variables
+  # ToDo: customize these variables
+  FRONTEND_PORT: 4200
+  BACKEND_PORT: 3000
+  URL: https://example.com
+  API_URL: https://example.com/api
+  DOCKER_HOST: ssh://user@127.0.0.1
+  DB_HOST: ${{ secrets.DEV_HOST }}
+  DB_NAME: ${{ secrets.DEV_NAME }}
+  DB_USER: ${{ secrets.DEV_USER }}
+  DB_PASS: ${{ secrets.DEV_PASS }}
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -41,7 +39,23 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      # Install the cosign tool except on PR
+      # https://github.com/sigstore/cosign-installer
+      - name: Run Angular Test
+      - run: ng test
 
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # This is used to complete the identity challenge
+      # with sigstore/fulcio when running outside of PRs.
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
       - name: Install cosign
@@ -49,7 +63,6 @@ jobs:
         uses: sigstore/cosign-installer@f3c664df7af409cb4873aa5068053ba9d61a57b6 #v2.6.0
         with:
           cosign-release: 'v1.13.1'
-
 
       # Workaround: https://github.com/docker/build-push-action/issues/461
       - name: Setup Docker buildx
@@ -86,9 +99,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-
   deploy:
-    name: deploy docker:remote
+    name: deploy on docker remote host
     runs-on: ubuntu-latest
     needs: build
     steps:
@@ -103,14 +115,13 @@ jobs:
       - name: setup docker remote
         uses: arwynfr/actions-docker-context@v2
         with:
-          docker_host: 'ssh://wappson@45.129.183.130'
-          context_name: 'development-server'
+          docker_host: ${{ env.DOCKER_HOST }}
+          context_name: ${{ github.ref_name }}-server
           ssh_cert: ${{ secrets.SSH_CERT }}
           ssh_key: ${{ secrets.SSH_KEY }}
 
-
       - name: change context
-        run: docker context use development-server
+        run: docker context use ${{ github.ref_name }}-server
 
       - name: pull fresh images
         working-directory: docker-compose-github-dev
@@ -134,10 +145,10 @@ jobs:
       - name: Frontend
         uses: fjogeleit/http-request-action@v1
         with:
-          url: 'https://dev.kummerchat.com'
+          url: ${{ env.URL }}
           method: 'GET'
       - name: Backend
         uses: fjogeleit/http-request-action@v1
         with:
-          url: 'https://dev.kummerchat.com/api/user/online'
+          url: ${{ env.API_URL }}/test
           method: 'GET'
