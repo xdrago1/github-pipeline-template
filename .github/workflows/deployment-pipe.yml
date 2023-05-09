@@ -44,7 +44,7 @@ jobs:
       # https://github.com/sigstore/cosign-installer
       - name: Run Angular Test
         working-directory: ./angular-app
-        run: npm install && npm run test
+        run: npm install && npm run test:prod
 
   build:
     needs: test
