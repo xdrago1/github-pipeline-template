@@ -43,7 +43,7 @@ jobs:
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
       - name: Run Angular Test
-        working-directory: ./frontend
+        working-directory: ./angular-app
         run: npm run test
 
   build:
