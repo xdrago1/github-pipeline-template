@@ -80,7 +80,7 @@ services:
     container_name: nginx
     restart: always
     build:
-      context: .
+      context: ./nginx
       dockerfile: nginx.dockerfile
     labels:
       - "traefik.enable=true"
@@ -91,6 +91,9 @@ services:
       - "traefik.http.middlewares.nginx_redirect.redirectregex.replacement=$${1}$${2}"
       - "traefik.http.routers.nginx.middlewares=nginx_redirect"
       - "traefik.docker.network=traefik_proxy"
+    environment:
+      BACKEND_PORT: ${BACKEND_PORT}
+      FRONTEND_PORT: ${FRONTEND_PORT}
     networks:
       - backend_network
       - frontend_network
